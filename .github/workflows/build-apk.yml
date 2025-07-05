@@ -39,11 +39,6 @@ jobs:
         npx @expo/cli --version
         npx eas-cli --version
       
-    - name: Configure EAS Build
-      run: npx eas-cli build:configure --non-interactive
-      env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        
     - name: Build APK
       run: npx eas-cli build --platform android --profile preview --non-interactive --wait
       env:
