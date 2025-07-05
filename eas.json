@@ -12,13 +12,13 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "credentialsSource": "auto"
+        "credentialsSource": "remote"
       }
     },
     "production": {
       "android": {
         "buildType": "apk",
-        "credentialsSource": "auto"
+        "credentialsSource": "remote"
       }
     }
   },
