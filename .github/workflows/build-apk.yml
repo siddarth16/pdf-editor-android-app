@@ -41,8 +41,8 @@ jobs:
       
     - name: Configure EAS project
       run: |
-        # Initialize EAS project
-        npx eas-cli init --non-interactive
+        # Initialize EAS project (create if it doesn't exist)
+        npx eas-cli init --non-interactive --force
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       
