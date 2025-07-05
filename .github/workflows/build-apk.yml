@@ -29,22 +29,35 @@ jobs:
     - name: Setup EAS CLI
       run: npm install -g eas-cli
       
-    - name: Expo Login
-      run: echo "${{ secrets.EXPO_TOKEN }}" | expo login --non-interactive
+    - name: Add npm global bin to PATH
+      run: echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
+      
+    - name: Verify CLI installation
+      run: |
+        which expo || echo "Expo not found in PATH"
+        which eas || echo "EAS not found in PATH"
+        npx @expo/cli --version
+        npx eas-cli --version
+      
+    - name: Configure EAS Build
+      run: npx eas-cli build:configure --non-interactive
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         
     - name: Build APK
-      run: eas build --platform android --profile preview --non-interactive --wait
+      run: npx eas-cli build --platform android --profile preview --non-interactive --wait
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         
     - name: Download APK
       run: |
         # Get the latest build URL from EAS and download the APK
-        BUILD_URL=$(eas build:list --platform android --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
-        if [ "$BUILD_URL" != "null" ]; then
+        BUILD_URL=$(npx eas-cli build:list --platform android --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+        if [ "$BUILD_URL" != "null" ] && [ "$BUILD_URL" != "" ]; then
           curl -o pdf-editor-pro.apk -L "$BUILD_URL"
+        else
+          echo "No build URL found, checking for local APK files"
+          ls -la *.apk || echo "No APK files found"
         fi
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
