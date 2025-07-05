@@ -23,6 +23,15 @@ jobs:
     - name: Install dependencies
       run: npm install
       
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
     - name: Setup Expo CLI
       run: npm install -g @expo/cli
       
@@ -32,37 +41,35 @@ jobs:
     - name: Add npm global bin to PATH
       run: echo "$(npm config get prefix)/bin" >> $GITHUB_PATH
       
-    - name: Verify CLI installation
-      run: |
-        which expo || echo "Expo not found in PATH"
-        which eas || echo "EAS not found in PATH"
-        npx @expo/cli --version
-        npx eas-cli --version
-      
     - name: Configure EAS project
       run: |
-        # Initialize EAS project (create if it doesn't exist)
         npx eas-cli init --non-interactive --force
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       
-    - name: Build APK
-      run: npx eas-cli build --platform android --profile development --non-interactive --wait
-      env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        
-    - name: Download APK
+    - name: Prebuild with Expo
+      run: npx expo prebuild --platform android --clear
+      
+    - name: Setup Gradle permissions
+      run: chmod +x ./android/gradlew
+      
+    - name: Build Android APK
       run: |
-        # Get the latest build URL from EAS and download the APK
-        BUILD_URL=$(npx eas-cli build:list --platform android --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
-        if [ "$BUILD_URL" != "null" ] && [ "$BUILD_URL" != "" ]; then
-          curl -o pdf-editor-pro.apk -L "$BUILD_URL"
+        cd android
+        ./gradlew assembleRelease --no-daemon
+        
+    - name: Find and rename APK
+      run: |
+        find . -name "*.apk" -type f
+        APK_PATH=$(find ./android -name "*.apk" -type f | head -1)
+        if [ -n "$APK_PATH" ]; then
+          cp "$APK_PATH" ./pdf-editor-pro.apk
+          echo "APK found and copied to pdf-editor-pro.apk"
+          ls -la *.apk
         else
-          echo "No build URL found, checking for local APK files"
-          ls -la *.apk || echo "No APK files found"
+          echo "No APK found"
+          exit 1
         fi
-      env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -95,4 +102,6 @@ jobs:
           - Build Number: ${{ github.run_number }}
           - Commit: ${{ github.sha }}
         draft: false
-        prerelease: false 
+        prerelease: false
+        files: |
+          *.apk 
