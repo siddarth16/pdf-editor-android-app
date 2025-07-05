@@ -39,6 +39,13 @@ jobs:
         npx @expo/cli --version
         npx eas-cli --version
       
+    - name: Configure EAS project
+      run: |
+        # Create EAS project if it doesn't exist
+        npx eas-cli project:create --non-interactive || echo "Project already exists or creation failed"
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      
     - name: Build APK
       run: npx eas-cli build --platform android --profile preview --non-interactive --wait
       env:
