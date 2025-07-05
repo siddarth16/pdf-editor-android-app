@@ -1,0 +1,74 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Setup Expo CLI
+      run: npm install -g @expo/cli
+      
+    - name: Setup EAS CLI
+      run: npm install -g eas-cli
+      
+    - name: Expo Login
+      run: echo "${{ secrets.EXPO_TOKEN }}" | expo login --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        
+    - name: Build APK
+      run: eas build --platform android --profile preview --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: pdf-editor-pro-apk
+        path: '*.apk'
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: PDF Editor Pro v${{ github.run_number }}
+        body: |
+          🚀 New build of PDF Editor Pro
+          
+          ## Features:
+          - Futuristic PDF viewer with smooth animations
+          - Advanced editing tools (drawing, text, annotations)
+          - Glassmorphism UI with neon color scheme
+          - Gesture-based navigation
+          - Export and sharing capabilities
+          
+          ## Installation:
+          Download the APK file and install on your Android device
+          
+          ## Build Info:
+          - Build Number: ${{ github.run_number }}
+          - Commit: ${{ github.sha }}
+        draft: false
+        prerelease: false 
