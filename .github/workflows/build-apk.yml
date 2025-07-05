@@ -41,8 +41,8 @@ jobs:
       
     - name: Configure EAS project
       run: |
-        # Create EAS project if it doesn't exist
-        npx eas-cli project:create --non-interactive || echo "Project already exists or creation failed"
+        # Initialize EAS project
+        npx eas-cli init --non-interactive
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       
