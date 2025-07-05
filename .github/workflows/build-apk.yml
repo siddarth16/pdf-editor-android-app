@@ -111,3 +111,144 @@ jobs:
         prerelease: false
         files: |
           *.apk
+          
+    # Comprehensive logging on failure
+    - name: Collect build logs on failure
+      if: failure()
+      run: |
+        echo "==================== BUILD FAILURE LOG ====================" > build-failure-log.txt
+        echo "Build failed at: $(date)" >> build-failure-log.txt
+        echo "GitHub Run ID: ${{ github.run_id }}" >> build-failure-log.txt
+        echo "GitHub Run Number: ${{ github.run_number }}" >> build-failure-log.txt
+        echo "Commit SHA: ${{ github.sha }}" >> build-failure-log.txt
+        echo "Branch: ${{ github.ref }}" >> build-failure-log.txt
+        echo "Event: ${{ github.event_name }}" >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== SYSTEM INFORMATION ====================" >> build-failure-log.txt
+        echo "Runner OS: $(uname -a)" >> build-failure-log.txt
+        echo "Node Version: $(node --version)" >> build-failure-log.txt
+        echo "NPM Version: $(npm --version)" >> build-failure-log.txt
+        echo "Java Version: $(java -version 2>&1)" >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== PACKAGE.JSON CONTENT ====================" >> build-failure-log.txt
+        cat package.json >> build-failure-log.txt 2>/dev/null || echo "package.json not found" >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== ANDROID SDK INFORMATION ====================" >> build-failure-log.txt
+        echo "ANDROID_HOME: $ANDROID_HOME" >> build-failure-log.txt
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT" >> build-failure-log.txt
+        ls -la $ANDROID_HOME 2>/dev/null || echo "Android SDK directory not found" >> build-failure-log.txt
+        echo "SDK Manager licenses:" >> build-failure-log.txt
+        ls -la $ANDROID_HOME/licenses 2>/dev/null || echo "No licenses directory found" >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== EXPO PROJECT INFORMATION ====================" >> build-failure-log.txt
+        echo "App.json content:" >> build-failure-log.txt
+        cat app.json >> build-failure-log.txt 2>/dev/null || echo "app.json not found" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        echo "Expo CLI version:" >> build-failure-log.txt
+        npx expo --version >> build-failure-log.txt 2>/dev/null || echo "Expo CLI not found" >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== ANDROID PROJECT STRUCTURE ====================" >> build-failure-log.txt
+        echo "Android directory contents:" >> build-failure-log.txt
+        ls -la android/ >> build-failure-log.txt 2>/dev/null || echo "Android directory not found" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        echo "Android app directory:" >> build-failure-log.txt
+        ls -la android/app/ >> build-failure-log.txt 2>/dev/null || echo "Android app directory not found" >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== GRADLE INFORMATION ====================" >> build-failure-log.txt
+        echo "Gradle wrapper properties:" >> build-failure-log.txt
+        cat android/gradle/wrapper/gradle-wrapper.properties >> build-failure-log.txt 2>/dev/null || echo "Gradle wrapper properties not found" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        echo "Build.gradle content:" >> build-failure-log.txt
+        cat android/build.gradle >> build-failure-log.txt 2>/dev/null || echo "Build.gradle not found" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        echo "App build.gradle content:" >> build-failure-log.txt
+        cat android/app/build.gradle >> build-failure-log.txt 2>/dev/null || echo "App build.gradle not found" >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== RECENT GRADLE LOGS ====================" >> build-failure-log.txt
+        echo "Gradle daemon logs:" >> build-failure-log.txt
+        find ~/.gradle/daemon -name "*.log" -type f -exec tail -100 {} \; >> build-failure-log.txt 2>/dev/null || echo "No Gradle daemon logs found" >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== ENVIRONMENT VARIABLES ====================" >> build-failure-log.txt
+        echo "PATH: $PATH" >> build-failure-log.txt
+        echo "NODE_PATH: $NODE_PATH" >> build-failure-log.txt
+        echo "JAVA_HOME: $JAVA_HOME" >> build-failure-log.txt
+        echo "EXPO_TOKEN: [REDACTED]" >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== DISK SPACE ====================" >> build-failure-log.txt
+        df -h >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "==================== PROCESS LIST ====================" >> build-failure-log.txt
+        ps aux | head -20 >> build-failure-log.txt
+        echo "============================================================" >> build-failure-log.txt
+        echo "" >> build-failure-log.txt
+        
+        echo "Log file created successfully!"
+        echo "Log file size: $(wc -l < build-failure-log.txt) lines"
+        
+    - name: Upload failure logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-failure-logs-${{ github.run_number }}
+        path: build-failure-log.txt
+        retention-days: 30
+        
+    - name: Comment on PR with failure logs
+      if: failure() && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          let logContent = '';
+          try {
+            logContent = fs.readFileSync('build-failure-log.txt', 'utf8');
+          } catch (error) {
+            logContent = 'Failed to read log file: ' + error.message;
+          }
+          
+          const body = `## 🚨 Build Failed
+          
+          **Run ID:** ${{ github.run_id }}
+          **Run Number:** ${{ github.run_number }}
+          **Commit:** ${{ github.sha }}
+          
+          ### 📋 Build Failure Logs
+          
+          <details>
+          <summary>Click to expand full logs</summary>
+          
+          \`\`\`
+          ${logContent.length > 60000 ? logContent.substring(0, 60000) + '\n... (truncated due to size limits)' : logContent}
+          \`\`\`
+          
+          </details>
+          
+          📎 **Full logs are also available as an artifact:** \`build-failure-logs-${{ github.run_number }}\`
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
