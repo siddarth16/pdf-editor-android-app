@@ -31,6 +31,12 @@ jobs:
         
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
+      with:
+        accept-android-sdk-licenses: true
+        log-accepted-android-sdk-licenses: true
+        
+    - name: Accept Android SDK licenses manually
+      run: yes | sdkmanager --licenses
       
     - name: Setup Expo CLI
       run: npm install -g @expo/cli
@@ -104,4 +110,4 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          *.apk 
+          *.apk
