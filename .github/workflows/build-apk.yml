@@ -13,10 +13,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
@@ -36,24 +36,34 @@ jobs:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         
     - name: Build APK
-      run: eas build --platform android --profile preview --non-interactive
+      run: eas build --platform android --profile preview --non-interactive --wait
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        
+    - name: Download APK
+      run: |
+        # Get the latest build URL from EAS and download the APK
+        BUILD_URL=$(eas build:list --platform android --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+        if [ "$BUILD_URL" != "null" ]; then
+          curl -o pdf-editor-pro.apk -L "$BUILD_URL"
+        fi
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pdf-editor-pro-apk
         path: '*.apk'
         
     - name: Create Release
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: v${{ github.run_number }}
-        release_name: PDF Editor Pro v${{ github.run_number }}
+        name: PDF Editor Pro v${{ github.run_number }}
         body: |
           🚀 New build of PDF Editor Pro
           
