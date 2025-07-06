@@ -36,7 +36,9 @@ jobs:
         log-accepted-android-sdk-licenses: true
         
     - name: Accept Android SDK licenses manually
-      run: yes | sdkmanager --licenses
+      run: |
+        yes | sdkmanager --licenses
+        echo "All Android SDK licenses have been accepted"
       
     - name: Setup Expo CLI
       run: npm install -g @expo/cli
@@ -54,8 +56,9 @@ jobs:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       
     - name: Prebuild with Expo
-      run: npx expo prebuild --platform android --clear
-      
+      run: |
+        npx expo prebuild --platform android
+        
     - name: Setup Gradle permissions
       run: chmod +x ./android/gradlew
       
