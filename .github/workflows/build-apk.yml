@@ -76,24 +76,22 @@ jobs:
             img.save(filename, 'PNG')
             print(f'Created {filename} ({size[0]}x{size[1]})')
         
-        # Create assets directory if it doesn't exist
+        # Ensure assets directory exists
         os.makedirs('assets', exist_ok=True)
         
-        # Generate required images
+        # Create all required images
         create_placeholder_image((1024, 1024), 'assets/icon.png', 'PDF')
         create_placeholder_image((1024, 1024), 'assets/adaptive-icon.png', 'PDF')
         create_placeholder_image((1284, 2778), 'assets/splash.png', 'PDF Editor Pro')
         create_placeholder_image((32, 32), 'assets/favicon.png', 'P')
-        
-        print('All placeholder images created successfully!')
         "
         
-    - name: Verify image assets
+    - name: Verify generated images
       run: |
         echo "Checking generated images..."
         ls -la assets/
-        file assets/*.png || echo "File command not available, checking sizes instead..."
-        du -h assets/*.png
+        file assets/*.png
+        du -sh assets/*
         
     - name: Setup Expo CLI
       run: npm install -g @expo/cli
@@ -109,6 +107,11 @@ jobs:
         npx eas-cli init --non-interactive --force
       env:
         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        
+    - name: Clean existing Android build files
+      run: |
+        rm -rf android/
+        echo "Cleaned existing Android build files for fresh configuration"
       
     - name: Prebuild with Expo
       run: |
@@ -147,31 +150,30 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ github.run_number }}
-        name: PDF Editor Pro v${{ github.run_number }}
+        files: '*.apk'
+        tag_name: 'v${{ github.run_number }}'
+        name: 'PDF Editor Pro v${{ github.run_number }}'
         body: |
-          🚀 New build of PDF Editor Pro
+          🚀 **PDF Editor Pro - Android APK Build**
           
-          ## Features:
-          - Futuristic PDF viewer with smooth animations
-          - Advanced editing tools (drawing, text, annotations)
-          - Glassmorphism UI with neon color scheme
-          - Gesture-based navigation
-          - Export and sharing capabilities
-          
-          ## Installation:
-          Download the APK file and install on your Android device
-          
-          ## Build Info:
+          **Build Information:**
           - Build Number: ${{ github.run_number }}
           - Commit: ${{ github.sha }}
-        draft: false
-        prerelease: false
-        files: |
-          *.apk
+          - Branch: ${{ github.ref_name }}
           
-    # Comprehensive logging on failure
-    - name: Collect build logs on failure
+          **Features:**
+          - Advanced PDF editing capabilities
+          - Modern glass-morphism UI
+          - Dark theme optimized
+          - Gesture-based navigation
+          
+          **Installation:**
+          Download the APK file and install on your Android device.
+          
+          *Built with ❤️ using GitHub Actions*
+          
+    # Add comprehensive failure logging
+    - name: Collect build failure logs
       if: failure()
       run: |
         echo "==================== BUILD FAILURE LOG ====================" > build-failure-log.txt
@@ -271,7 +273,7 @@ jobs:
         path: build-failure-log.txt
         retention-days: 30
         
-    - name: Comment on PR with failure logs
+    - name: Comment on PR with failure details
       if: failure() && github.event_name == 'pull_request'
       uses: actions/github-script@v7
       with:
@@ -281,32 +283,24 @@ jobs:
           try {
             logContent = fs.readFileSync('build-failure-log.txt', 'utf8');
           } catch (error) {
-            logContent = 'Failed to read log file: ' + error.message;
+            logContent = 'Could not read failure log file.';
           }
           
-          const body = `## 🚨 Build Failed
+          const comment = `## 🚨 Build Failed
           
           **Run ID:** ${{ github.run_id }}
-          **Run Number:** ${{ github.run_number }}
           **Commit:** ${{ github.sha }}
           
-          ### 📋 Build Failure Logs
-          
-          <details>
-          <summary>Click to expand full logs</summary>
-          
+          **Failure Logs:**
           \`\`\`
-          ${logContent.length > 60000 ? logContent.substring(0, 60000) + '\n... (truncated due to size limits)' : logContent}
+          ${logContent.substring(0, 2000)}
           \`\`\`
           
-          </details>
-          
-          📎 **Full logs are also available as an artifact:** \`build-failure-logs-${{ github.run_number }}\`
-          `;
+          [View full logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
           
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: body
+            body: comment
           });
