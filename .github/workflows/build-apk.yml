@@ -36,10 +36,65 @@ jobs:
         log-accepted-android-sdk-licenses: true
         
     - name: Accept Android SDK licenses manually
-      run: |
-        yes | sdkmanager --licenses
-        echo "All Android SDK licenses have been accepted"
+      run: yes | sdkmanager --licenses
       
+    - name: Setup Python for image generation
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        
+    - name: Install Python dependencies
+      run: pip install pillow
+      
+    - name: Generate placeholder images
+      run: |
+        python3 -c "
+        from PIL import Image, ImageDraw, ImageFont
+        import os
+        
+        def create_placeholder_image(size, filename, text='PDF', bg_color=(16, 16, 16), text_color=(255, 255, 255)):
+            img = Image.new('RGBA', size, bg_color + (255,))
+            draw = ImageDraw.Draw(img)
+            
+            try:
+                font = ImageFont.load_default()
+            except:
+                font = None
+            
+            if font:
+                bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+            else:
+                text_width = len(text) * 8
+                text_height = 12
+            
+            x = (size[0] - text_width) // 2
+            y = (size[1] - text_height) // 2
+            
+            draw.text((x, y), text, fill=text_color, font=font)
+            img.save(filename, 'PNG')
+            print(f'Created {filename} ({size[0]}x{size[1]})')
+        
+        # Create assets directory if it doesn't exist
+        os.makedirs('assets', exist_ok=True)
+        
+        # Generate required images
+        create_placeholder_image((1024, 1024), 'assets/icon.png', 'PDF')
+        create_placeholder_image((1024, 1024), 'assets/adaptive-icon.png', 'PDF')
+        create_placeholder_image((1284, 2778), 'assets/splash.png', 'PDF Editor Pro')
+        create_placeholder_image((32, 32), 'assets/favicon.png', 'P')
+        
+        print('All placeholder images created successfully!')
+        "
+        
+    - name: Verify image assets
+      run: |
+        echo "Checking generated images..."
+        ls -la assets/
+        file assets/*.png || echo "File command not available, checking sizes instead..."
+        du -h assets/*.png
+        
     - name: Setup Expo CLI
       run: npm install -g @expo/cli
       
