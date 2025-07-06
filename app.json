@@ -30,7 +30,8 @@
       ],
       "compileSdkVersion": 34,
       "targetSdkVersion": 34,
-      "buildToolsVersion": "34.0.0"
+      "buildToolsVersion": "34.0.0",
+      "minSdkVersion": 23
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -43,7 +44,8 @@
             "compileSdkVersion": 34,
             "targetSdkVersion": 34,
             "buildToolsVersion": "34.0.0",
-            "ndkVersion": "27.1.12297006"
+            "ndkVersion": "27.1.12297006",
+            "minSdkVersion": 23
           }
         }
       ]
